@@ -38,7 +38,13 @@
 
     <div class="card p-4 mb-4">
       <form id="search-form" class="row gy-3 align-items-center">
-        <div class="col-12 col-lg-6">
+        <div class="col-12 col-lg-4">
+          <label for="selectInstructor" class="form-label fw-semibold">Seleccionar instructor</label>
+          <select id="selectInstructor" class="form-select form-select-lg" aria-label="Seleccionar instructor">
+            <option value="">Seleccione un instructor</option>
+          </select>
+        </div>
+        <div class="col-12 col-lg-4">
           <label for="cedula" class="form-label fw-semibold">Número de cédula</label>
           <input
             type="text"
@@ -50,10 +56,10 @@
             required
           />
         </div>
-        <div class="col-12 col-lg-3 d-flex align-items-end">
+        <div class="col-12 col-lg-2 d-flex align-items-end">
           <button type="submit" class="btn btn-primary btn-lg w-100">Consultar</button>
         </div>
-        <div class="col-12 col-lg-3 d-flex align-items-end">
+        <div class="col-12 col-lg-2 d-flex align-items-end">
           <div id="loading" class="d-none text-primary" role="status" aria-live="polite">
             <div class="spinner-border align-middle" aria-hidden="true"></div>
             <span class="ms-2 fw-semibold">Consultando...</span>
@@ -145,11 +151,37 @@
         .join("");
     }
 
-    // Maneja la lógica principal de consulta a la API
-    document.getElementById("search-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const cedula = document.getElementById("cedula").value.trim();
+    const cedulaInput = document.getElementById("cedula");
+    const instructorSelect = document.getElementById("selectInstructor");
 
+    // Carga y llena el selector de instructores desde el CSV local
+    async function loadInstructors() {
+      try {
+        const response = await fetch("instructores.csv");
+        if (!response.ok) {
+          throw new Error(`No se pudo cargar instructores.csv (código ${response.status}).`);
+        }
+
+        const text = await response.text();
+        const lines = text.trim().split(/\r?\n/);
+        const dataLines = lines.slice(1); // omitir encabezados
+
+        dataLines.forEach((line) => {
+          const [instructor, cedula, programa] = line.split(",").map((value) => value?.trim() || "");
+          if (instructor && cedula && programa) {
+            const option = document.createElement("option");
+            option.value = cedula;
+            option.textContent = `${instructor} – ${programa}`;
+            instructorSelect.appendChild(option);
+          }
+        });
+      } catch (error) {
+        console.error("Error al cargar instructores:", error);
+      }
+    }
+
+    // Maneja la lógica principal de consulta a la API
+    async function searchContracts(cedula) {
       // Validación básica del campo de entrada
       if (!cedula) {
         showAlert("Por favor, ingrese un número de cédula para continuar.", "warning");
@@ -191,7 +223,23 @@
       } finally {
         toggleLoading(false);
       }
+    }
+
+    document.getElementById("search-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const cedula = cedulaInput.value.trim();
+      searchContracts(cedula);
     });
+
+    instructorSelect.addEventListener("change", (event) => {
+      const selectedCedula = event.target.value;
+      if (selectedCedula) {
+        cedulaInput.value = selectedCedula;
+        searchContracts(selectedCedula);
+      }
+    });
+
+    loadInstructors();
   </script>
   <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
