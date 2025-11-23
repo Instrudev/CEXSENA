@@ -104,9 +104,9 @@
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.5/pizzip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.12/docxtemplater.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.5/dist/pizzip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.37.12/build/docxtemplater.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script>
     // Utilidad para mostrar alertas descriptivas en la interfaz
     function showAlert(message, type = "info") {
@@ -289,7 +289,8 @@
         }
 
         const arrayBuffer = await response.arrayBuffer();
-        const zip = new window.PizZip(arrayBuffer);
+        const PizZipClass = window.PizZip?.default || window.PizZip;
+        const zip = new PizZipClass(arrayBuffer);
         const Docxtemplater = window.docxtemplater || window.Docxtemplater;
 
         normalizePlaceholders(zip, [
