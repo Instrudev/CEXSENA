@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Generar contrato{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Consulta por cédula</h2>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label" for="id_cedula">{{ form.cedula.label }}</label>
+                {{ form.cedula }}
+                {% if form.cedula.help_text %}
+                    <div class="form-text">{{ form.cedula.help_text }}</div>
+                {% endif %}
+                {% if form.cedula.errors %}
+                    <div class="text-danger small">{{ form.cedula.errors|striptags }}</div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary">Generar archivo</button>
+        </form>
+
+        {% if error %}
+            <div class="alert alert-warning mt-3 mb-0" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
