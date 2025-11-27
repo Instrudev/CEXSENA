@@ -18,8 +18,48 @@
                     <div class="text-danger small">{{ form.cedula.errors|striptags }}</div>
                 {% endif %}
             </div>
-            <button type="submit" class="btn btn-primary">Generar archivo</button>
+            <div class="d-flex gap-2">
+                <button type="submit" name="consultar" value="1" class="btn btn-outline-primary">Consultar</button>
+                {% if resultados %}
+                    <button type="submit" name="generar" value="1" class="btn btn-primary">Generar Documento</button>
+                {% endif %}
+            </div>
         </form>
+
+        {% if resultados %}
+            <div class="table-responsive mt-4">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Contratista</th>
+                            <th>Entidad</th>
+                            <th>Valor</th>
+                            <th>Objeto</th>
+                            <th>ID Proceso</th>
+                            <th>Departamento</th>
+                            <th>Inicio</th>
+                            <th>Fin</th>
+                            <th>URL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contrato in resultados %}
+                            <tr>
+                                <td>{{ contrato.contractor }}</td>
+                                <td>{{ contrato.entity }}</td>
+                                <td>${{ contrato.value|floatformat:0 }}</td>
+                                <td>{{ contrato.object }}</td>
+                                <td>{{ contrato.process_id }}</td>
+                                <td>{{ contrato.department }}</td>
+                                <td>{{ contrato.contract_start_date }}</td>
+                                <td>{{ contrato.contract_end_date }}</td>
+                                <td><a href="{{ contrato.url }}" target="_blank" rel="noopener">Enlace</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
 
         {% if error %}
             <div class="alert alert-warning mt-3 mb-0" role="alert">

@@ -14,6 +14,13 @@ TARGET_ENTITY = "SENA REGIONAL HUILA GRUPO ADMINISTRATIVO CEFA"
 
 
 def replace_placeholders(document: Document, data: dict) -> None:
+    """Replace placeholders across paragraphs, tables, headers and footers.
+
+    This implementation concatenates the text of each run collection to avoid
+    missing placeholders that were split across multiple runs, then writes the
+    updated content back preserving the surrounding structure of the document.
+    """
+
     placeholders = {
         "{{contractor}}": data.get("contractor", ""),
         "{{entity}}": data.get("entity", ""),
@@ -26,20 +33,42 @@ def replace_placeholders(document: Document, data: dict) -> None:
         "{{url}}": data.get("url", ""),
     }
 
-    def replace_in_paragraph(paragraph) -> None:
+    def replace_in_runs(paragraph) -> None:
+        """Replace placeholder text within a paragraph's runs safely."""
+
+        if not paragraph.runs:
+            return
+
+        combined_text = "".join(run.text for run in paragraph.runs)
+        new_text = combined_text
         for placeholder, value in placeholders.items():
-            if placeholder in paragraph.text:
-                for run in paragraph.runs:
-                    run.text = run.text.replace(placeholder, value)
+            new_text = new_text.replace(placeholder, value)
 
-    for paragraph in document.paragraphs:
-        replace_in_paragraph(paragraph)
+        if new_text != combined_text:
+            paragraph.runs[0].text = new_text
+            for run in paragraph.runs[1:]:
+                run.text = ""
 
-    for table in document.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                for paragraph in cell.paragraphs:
-                    replace_in_paragraph(paragraph)
+    def process_paragraphs(paragraphs) -> None:
+        for paragraph in paragraphs:
+            replace_in_runs(paragraph)
+
+    def process_tables(tables) -> None:
+        for table in tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    process_paragraphs(cell.paragraphs)
+                    # Handle nested tables inside cells if present.
+                    process_tables(cell.tables)
+
+    process_paragraphs(document.paragraphs)
+    process_tables(document.tables)
+
+    for section in document.sections:
+        process_paragraphs(section.header.paragraphs)
+        process_tables(section.header.tables)
+        process_paragraphs(section.footer.paragraphs)
+        process_tables(section.footer.tables)
 
 
 def generar_contrato(request):
@@ -75,21 +104,33 @@ def generar_contrato(request):
             )
             return render(request, "contratos/formulario.html", context)
 
-        primer_contrato = contratos_filtrados[0]
-        plantilla_path = Path(settings.BASE_DIR) / "static" / "plantillas" / "plantilla.docx"
-
-        if not plantilla_path.exists():
-            context["error"] = "La plantilla de Word no está disponible en la ruta configurada."
+        # Mostrar resultados sin generar Word cuando se presiona "Consultar".
+        if "consultar" in request.POST:
+            context["resultados"] = contratos_filtrados
             return render(request, "contratos/formulario.html", context)
 
-        document = Document(plantilla_path)
-        replace_placeholders(document, primer_contrato)
+        # Generar el documento Word cuando el usuario presiona "Generar".
+        if "generar" in request.POST:
+            primer_contrato = contratos_filtrados[0]
+            plantilla_path = (
+                Path(settings.BASE_DIR) / "static" / "plantillas" / "plantilla.docx"
+            )
 
-        output = BytesIO()
-        document.save(output)
-        output.seek(0)
+            if not plantilla_path.exists():
+                context["error"] = (
+                    "La plantilla de Word no está disponible en la ruta configurada."
+                )
+                context["resultados"] = contratos_filtrados
+                return render(request, "contratos/formulario.html", context)
 
-        filename = f"resultado_{cedula}.docx"
-        return FileResponse(output, as_attachment=True, filename=filename)
+            document = Document(plantilla_path)
+            replace_placeholders(document, primer_contrato)
+
+            output = BytesIO()
+            document.save(output)
+            output.seek(0)
+
+            filename = f"resultado_{cedula}.docx"
+            return FileResponse(output, as_attachment=True, filename=filename)
 
     return render(request, "contratos/formulario.html", context)
